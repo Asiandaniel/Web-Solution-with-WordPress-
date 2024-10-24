@@ -582,3 +582,199 @@ sudo systemctl status httpd
 4. Access the web browser: http://your-server-ip
 
 If everything is configured correctly, you should see the default redhat page.
+.
+.
+.
+.
+IMAGE 
+.
+.
+.
+## Step 3: Enable Necessary Repositories
+To install the latest PHP version, we need to enable additional repositories, which are not enabled by default on RHEL 9.
+
+.
+.
+.
+.
+IMAGE 
+.
+.
+.
+ ## Install the EPEL Repository
+EPEL (Extra Packages for Enterprise Linux) is a repository that contains additional software packages that are not provided in the default RHEL repository but are often needed for full functionality.
+```
+sudo dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+```
+Install the Remi Repository
+
+Remi’s repository is required to install PHP 8.3, as RHEL’s default repositories only provide PHP versions up to 8.2.
+```
+sudo dnf install https://rpms.remirepo.net/enterprise/remi-release-9.rpm
+```
+## Step 4: Install PHP 8.3 and Extensions
+
+1. enable the module stream for PHP 8.3:
+```
+- sudo dnf module switch-to php:remi-8.3
+```
+2. install the module stream for PHP 8.3 with default extension:
+```
+- sudo dnf module install php:remi-8.3
+```
+3. Install PHP 8.3 and the necessary extensions for WordPress:
+```
+sudo dnf install php php-opcache php-gd php-curl php-mysqlnd php-xml php-json php-mbstring php-intl php-soap php-zip
+```
+##Explanation of Key PHP Extensions:
+
+- php-opcache: Boosts performance by storing precompiled script bytecode in memory.
+- php-gd: Provides image manipulation capabilities (needed for image uploads and manipulation in WordPress).
+- php-curl: Allows external HTTP requests, used by WordPress to connect to other websites (e.g., for API calls).
+- php-mysqlnd: Native MySQL driver for connecting WordPress to the database.
+- php-xml: Handles XML parsing and writing.
+- php-json: Allows WordPress to handle JSON data (used heavily in REST APIs).
+- php-mbstring: Helps in handling multi-byte strings (essential for supporting various languages).
+- php-intl: Adds support for internationalization features.
+- php-soap: Adds SOAP protocol support.
+- php-zip: Required for managing ZIP files (used for plugin/theme uploads and updates).
+
+4. Start and enable PHP-FPM:
+```
+sudo systemctl start php-fpm
+sudo systemctl enable php-fpm
+```
+5. Restart Apache to apply the changes:
+```
+sudo systemctl restart httpd
+```
+
+## Step 5: Configure SELinux (Security-Enhanced Linux)
+
+Why SELinux?
+SELinux is a security module that enforces strict access control policies on your system, especially important for enterprise environments like Red Hat. It helps limit the damage that could be caused by compromised services, including the web server and PHP. By default, SELinux is set to enforcing mode on RHEL. This mode restricts many actions that Apache and PHP-FPM might need to function correctly.
+
+Check SELinux Status
+Verify that SELinux is enabled and in enforcing mode:
+```
+sestatus
+```
+Expected output:
+```
+SELinux status:                 enabled
+Current mode:                   enforcing
+```
+Configure SELinux for PHP and Apache
+To allow Apache and PHP-FPM to run without issues, you need to allow specific actions that would otherwise be restricted by SELinux.
+
+1. Allow Apache to execute memory operations (needed by PHP’s OpCache):
+```
+sudo setsebool -P httpd_execmem 1
+```
+2. Allow Apache to make network connections (required for external HTTP requests, for example, for connecting to APIs or downloading plugins/themes):
+```
+sudo setsebool -P httpd_can_network_connect 1
+```
+## Step 6: Verify PHP Installation
+After installation, check that PHP 8.3 is correctly installed and running.
+
+1. Check the PHP version:
+```
+php --version
+```
+You should see output similar to:
+```
+PHP 8.3.12 (cli) (built: Sep 26 2024 02:19:56) ( NTS )
+```
+2. List the installed PHP modules:
+```
+php -m
+```
+Ensure all necessary extensions for WordPress (like curl, gd, mbstring, etc.) are listed, see recommended list from Wordpress.
+
+## Step 7: Test PHP Functionality
+
+Create a PHP info page to verify that PHP is correctly served through Apache:
+
+1. Create a test PHP file:
+```
+sudo nano /var/www/html/info.php
+```
+
+2. Add the following code:
+3. 
+```
+<?php
+phpinfo();
+?>
+```
+2. Access this file via your web browser: http://your-server-ip/info.php
+
+If everything is configured correctly, a page displaying detailed PHP information should appear. kindly delete the info.php once testing is done.
+
+.
+.
+.
+.
+IMAGE 
+.
+.
+.
+# Wordpress Installation
+
+1. Install the wget package
+```
+ - sudo dnf install wget
+```
+
+2. Download the latest version of WordPress:
+```
+sudo wget https://wordpress.org/latest.tar.gz
+```
+3. Extract the WordPress archive:
+```
+sudo tar -xzvf latest.tar.gz
+sudo rm latest.tar.gz
+```
+
+*The -xzvf flag in the tar command is a combination of options used to extract (x), compress/uncompress (z), show verbose output (v), and specify the file (f). Here's the breakdown:*
+
+*x: Extracts the files from the archive.
+z: Tells tar to decompress the file using gzip. The .gz extension indicates the file was compressed using gzip.
+v: Displays the files being extracted (verbose output), so you can see what tar is doing.
+f: Specifies the file to operate on (latest.tar.gz in this case).*
+
+4. Move WordPress folder to your Apache web root:
+```
+sudo mv wordpress/ /var/www/html/
+```
+
+5. Set the correct permissions for the Apache user:
+```
+sudo chown -R apache:apache /var/www/html/wordpress
+sudo chmod -R 755 /var/www/html/wordpress
+sudo chcon -t httpd_sys_rw_content_t  /var/www/html/wordpress -R
+```
+
+*Note: This sets the proper SELinux context (httpd_sys_rw_content_t) on the WordPress directory, allowing Apache (httpd) to write to files within it, which is crucial for tasks like uploading media, installing plugins, and updating WordPress. The -R flag applies the change recursively to all files and subdirectories.*
+
+Restart Apache to apply the changes:
+```
+sudo systemctl restart httpd
+```
+accessing ```http://instance-public-ip/wordpress``` from your browser to see the wordpress installation
+.
+.
+.
+.
+IMAGE 
+.
+.
+.
+# Final Steps and Reflections
+ 
+At this point, the infrastructure was set up with WordPress and MySQL on separate EC2 instances, using EBS volumes managed by LVM for flexible storage.
+
+# Reflections
+- LVM: Extremely helpful in dynamic storage management without needing to detach and re-attach EBS volumes.
+- Instance Types: Using at least t2.small EC2 instances for web-server prevented resource limitations during installations.
