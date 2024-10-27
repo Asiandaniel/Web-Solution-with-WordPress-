@@ -1,4 +1,4 @@
-# Web-Solution-with-WordPress-
+![image](https://github.com/user-attachments/assets/fa5c680c-d1c2-4897-bd45-c643894c2b4a)# Web-Solution-with-WordPress-
 
 
 
@@ -35,12 +35,8 @@ This project entails configuring WordPress on an EC2 instance with Red Hat Enter
 - **db-server**: Runs the MySQL database.
 
 The web-server will be at least a t2.small instance, while the db-server will use a t2.micro instance.
-.
-.
-IMAGE
-.
-.
-.
+![image](https://github.com/user-attachments/assets/834e9dae-2278-4252-bd4a-d8a980bfb915)
+
 # Prerequisites
 Before starting, I ensured:
 - Two AWS EC2 instances (for WordPress and MySQL) running Red Hat Enterprise Linux 9.4.
@@ -54,7 +50,7 @@ Before starting, I ensured:
 Web-Server Instance:
 
 - Instance Type: t2.small
-- 3 EBS Volumes: 10GB each (/dev/xvdb, /dev/xvdc, /dev/xvdd)
+- 3 EBS Volumes: 10GB each (/dev/nvme1n1 , /dev/nvme2n1 , /dev/nvme3n1 )
 
 DB-Server Instance:
 
@@ -81,9 +77,9 @@ To be able to identify the EBS, name them as follows in the AWS console:
 Web Server:
 
 - web-server-root - for the default EBS attached to the web-server instance when created
-- web-server-vol-1 - for the xvdb attached to the web-server
-- web-server-vol-2 - for the xvdc attached to the web-server
-- web-server-vol-3 - for the xvdd attached to the web-server
+- web-server-vol-1 - for the nvme1n1  attached to the web-server
+- web-server-vol-2 - for the nvme2n1  attached to the web-server
+- web-server-vol-3 - for the nvme3n1  attached to the web-server
 
 DB Server:
 
@@ -92,16 +88,7 @@ DB Server:
 - db-server-vol-2 - for the xvdc attached to the db-server
 - db-server-vol-3 - for the xvdd attached to the db-server
 
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/1ed689f8-3ed5-4f34-a30f-0216e79f1672)
 
 .
 # Configuring EBS and Logical Volume Manager (LVM) web-server
@@ -110,18 +97,11 @@ Connect to the web-server instance via the ssh terminal to have access to the sy
  ## EBS Setup
 - Check Volume Visibility: After SSH'ing into the instances, I listed the attached block devices using:
 ```lsblk```
-The new volumes appeared as /dev/xvdb, /dev/xvdc, and /dev/xvdd.
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
-```note down the name of the EBB volumes as shown on the output of the lsblk command```
+The new volumes appeared as /dev/nvme1n1, /dev/nvme2n1 , and /dev/nvme3n1 .
+
+![image](https://github.com/user-attachments/assets/bb587024-f00e-47ea-8ef8-261056bab4b1)
+
+*note down the name of the EBB volumes as shown on the output of the lsblk command*
 
 # LVM Configuration
 1. Install LVM Tools: Since Red Hat Enterprise Linux 9.4 was being used, I ensured LVM was installed, I also installed nano (text editor) and wget (for downloading)
@@ -135,62 +115,38 @@ you can check for available partition using lvmdiskscan command, however, since 
   Using the gdisk utitlity to create a single partition on each EBS block as follows:
 
 ```
-sudo gdisk /dev/xvdb
+sudo gdisk /dev/nvme1n1
 ```
 This will launch the partition utility interface as shown below:
 
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/20394cd7-51e5-42e8-8828-28b322ba281a)
+
 use the following commands to create and save the partition table to disk:
 
 - n - To create a partition table, accept all defaults by pressing Enter key
 - p - Print partition table informatoon
 - w - Write changes to disk
 
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/d4e1df97-171e-4899-9046-0ccbd82a3265)
+
 You do the same for the remaining EBS blocks using the commands below:
 - xvdc block
-  ```sudo gdisk /dev/xvdc ```
+  ```sudo gdisk /dev/nvme2n1 ```
   xvdd block
-  ```sudo gdisk /dev/xvdd```
+  ```sudo gdisk /dev/nvme3n1```
 confirm the partitions using lsblk
 
  ```lsblk```
 
-   .
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
-note down the partition names: xvdb1, xvdc1 and xvdd1
+![image](https://github.com/user-attachments/assets/92e9947e-796e-4ae9-877d-93e4cc44313a)
+
+*note down the partition names: xvdb1, xvdc1 and xvdd1*
 
 3.  Create Physical Volumes: Converted the three attached EBS block partitions into physical volumes (PVs):
-    ```  sudo pvcreate /dev/xvdb1 /dev/xvdc1 /dev/xvdd1 ```
+    ```   sudo pvcreate /dev/nvme1n1p1 /dev/nvme2n1p1 /dev/nvme3n1p1 ```
 4. Create Volume Group: Next, Created a volume group (VG) to aggregate the PVs:
  
-```sudo vgcreate webdata-vg /dev/xvdb1 /dev/xvdc1 /dev/xvdd1```
+``` sudo vgcreate webdata-vg /dev/nvme1n1p1 /dev/nvme2n1p1 /dev/nvme3n1p1```
 
 5. Create Logical Volumes: Created logical volumes (LVs) for storing WordPress application data and logs. Here's how I did it:
 ```
@@ -198,16 +154,8 @@ sudo lvcreate -n app-lv -L 14G  webdata-vg
 sudo lvcreate -n log-lv -L 14G  webdata-vg
 lsblk
 ```
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/6e7b6a7c-12a1-4284-a5c6-21e2235db424)
+
 To verify the entire setup - view the VG, PV and LV, you can run:
 ``` sudo vgdisplay -v ```
 
@@ -217,16 +165,8 @@ sudo mkfs -t ext4 /dev/webdata-vg/app-lv
 sudo mkfs -t ext4 /dev/webdata-vg/log-lv
 ```
 
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/ab761d7a-029a-414e-825c-8cc5dca55269)
+
 Then mounted them:
 
 - Create the following locations:
@@ -259,16 +199,8 @@ sudo rsync -av /home/recovery/logs/ /var/log/
 ```
 sudo blkid
 ```
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/d171b9c4-5f53-45cd-9cba-523c650d38df)
+
 - Update the /etc/fstab:
 ```
 sudo nano /etc/fstab
@@ -276,8 +208,8 @@ sudo nano /etc/fstab
 - Paste the code below:
 ```
 # mounts for wordpress webserver
-UUID=c5e7c435-3141-4ea9-b410-62464d1cc478 /var/www/html ext4 defaults 0 0
-UUID=88fb1766-b4d9-4931-87e7-99447eb6cc24 /var/log ext4 defaults 0 0
+UUID=c4c97ab2e-6e60-4cc2-9ee6-ca2ea629cb1c /var/www/html ext4 defaults 0 0
+UUID=ec7cfc77-fa1b-4488-84a9-4ee36f07f285 /var/log ext4 defaults 0 0
 ```
 - Save and reload the daemon:
 ```
@@ -296,17 +228,10 @@ Connect to the db-server instance via the ssh terminal to have access to the sys
    ```
    lsblk
    ```
-   The new volumes appeared as /dev/xvdb, /dev/xvdc, and /dev/xvdd.
+   The new volumes appeared as /dev/nvme0n1, /dev/nvme2n1, and /dev/nvme3n1.
    .
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/28963edb-3434-4805-8b46-2961821b3729)
+
 *note down the name of the EBB volumes as shown on the output of the lsblk command*
 
 # LVM Configuration
@@ -321,71 +246,46 @@ you can check for available partition using lvmdiskscan command, however, since 
 
 Using the gdisk utitlity to create a single partition on each EBS block as follows:
 
-```sudo gdisk /dev/xvdb```
+```sudo gdisk /dev/nvme3n1```
 
 This will launch the partition utility interface as shown below:
 
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/eb855226-00df-426d-b14b-538957bc1e08)
+
 use the following commands to create and save the partition table to disk:
 
 - n - To create a partition table, accept all defaults by pressing Enter key
 - p - Print partition table informatoon
 - w - Write changes to disk
 
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/c9dc41d5-c27f-4146-b2e7-39ad8464c598)
+
 You do the same for the remaining EBS blocks using the commands below:
 
 - xvdc block:
 ```
-sudo gdisk /dev/xvdc
+sudo gdisk /dev/nvme2n1   
 ```
 - xvdd block:
 
 ```
-sudo gdisk /dev/xvdd
+sudo gdisk /dev/nvme3n1   
 ```
 confirm the partitions using lsblk
 ```
 lsblk
 ```
+![image](https://github.com/user-attachments/assets/9feef048-8d20-4a8f-85a8-d0ad2bdfe276)
 
-.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
 *note down the partition names: xvdb1, xvdc1 and xvdd1*
 
 3. Create Physical Volumes: Converted the three attached EBS block partitions into physical volumes (PVs):
 
-  `sudo pvcreate /dev/xvdb1 /dev/xvdc1 /dev/xvdd1`
+  `sudo pvcreate /dev/nvme0n1p1 /dev/nvme2n1p1 /dev/nvme3n1p1`
   
 4. Create Volume Group: Next, Created a volume group (VG) to aggregate the PVs:
 
-   `sudo vgcreate dbdata-vg /dev/xvdb1 /dev/xvdc1 /dev/xvdd1`
+   `sudo vgcreate dbdata-vg /dev/nvme0n1p1 /dev/nvme2n1p1 /dev/nvme3n1p1`
    
 5. Create Logical Volumes: Created logical volumes (LVs) for storing WordPress application data and logs. Here's how I did it:
 
@@ -394,16 +294,8 @@ sudo lvcreate -n db-lv -L 14G  dbdata-vg
 sudo lvcreate -n log-lv -L 14G  dbdata-vg
 lsblk
 ```
+![image](https://github.com/user-attachments/assets/710cb283-7a2c-4ff4-80ad-ad51752dc820)
 
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
 
 To verify the entire setup - view the VG, PV and LV, you can run:
 
@@ -416,15 +308,8 @@ To verify the entire setup - view the VG, PV and LV, you can run:
 sudo mkfs -t ext4 /dev/dbdata-vg/db-lv
 sudo mkfs -t ext4 /dev/dbdata-vg/log-lv
 ```
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/fec12049-922b-4519-a51b-2f472cf48b2b)
+
 Then mounted them:
 
 - Create the following locations:
@@ -459,22 +344,15 @@ Persistent Mounts: To ensure the volumes are automatically mounted at boot, upda
 - Get the UUID of the LVs:
 
 ```sudo blkid```
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
-.
+![image](https://github.com/user-attachments/assets/b0db8b35-72a4-484c-be41-dfd2a8ffaec9)
+
 - Update the /etc/fstab:
 ```sudo nano /etc/fstab```
 - Paste the code below:
 ```
 # mounts for wordpress webserver
-UUID=c5e7c435-3141-4ea9-b410-62464d1cc478 /db ext4 defaults 0 0
-UUID=88fb1766-b4d9-4931-87e7-99447eb6cc24 /var/log ext4 defaults 0 0
+UUID=19f61771-f7c0-48c7-8978-a006a08e89e6 /db ext4 defaults 0 0
+UUID=ff5419f4-f6cc-41cd-a947-ca80f8296e66 /var/log ext4 defaults 0 0
 ```
 Save and reload the daemon:
 ```sudo systemctl daemon-reload```
@@ -531,8 +409,8 @@ sudo mysql_secure_installation
 ```sudo mysql -u root -p```
 ```
 CREATE DATABASE wordpress;
-CREATE USER 'myuser'@'172.31.3.201' IDENTIFIED WITH mysql_native_password BY 'Password.1';
-GRANT ALL PRIVILEGES ON wordpress.* TO 'myuser'@'172.31.3.201';
+CREATE USER 'myuser'@'172.31.30.106' IDENTIFIED WITH mysql_native_password BY 'Password.1';
+GRANT ALL PRIVILEGES ON wordpress.* TO 'myuser'@'172.31.30.106';
 FLUSH PRIVILEGES;
 EXIT;
 ```
@@ -542,16 +420,10 @@ EXIT;
 ```sudo dnf install mysql```
 
 - Connect to the remote mysql server:
-```sudo mysql -h 172.31.3.113 -u myuser -p```
+```sudo mysql -h 172.31.30.106 -u myuser -p```
 if you can connect into the mysql shell, then the setup was successful.
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
+![image](https://github.com/user-attachments/assets/ea422ef1-4998-4910-9c17-ba5436b2a275)
+
 
 # Installing Apache, PHP 8.3, and PHP Extensions on web-server instance
 ## Step 1: Verify RHEL Version
@@ -583,24 +455,13 @@ sudo systemctl status httpd
 
 If everything is configured correctly, you should see the default redhat page.
 .
-.
-.
-.
-IMAGE 
-.
-.
-.
+![image](https://github.com/user-attachments/assets/e6d3339b-4c1e-4a62-bcfd-5c4d26247f94)
+
 ## Step 3: Enable Necessary Repositories
 To install the latest PHP version, we need to enable additional repositories, which are not enabled by default on RHEL 9.
 
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
+![image](https://github.com/user-attachments/assets/1dcb8fe5-424c-4ffa-84ba-96cda6e2019f)
+
  ## Install the EPEL Repository
 EPEL (Extra Packages for Enterprise Linux) is a repository that contains additional software packages that are not provided in the default RHEL repository but are often needed for full functionality.
 ```
@@ -712,14 +573,8 @@ phpinfo();
 
 If everything is configured correctly, a page displaying detailed PHP information should appear. kindly delete the info.php once testing is done.
 
-.
-.
-.
-.
-IMAGE 
-.
-.
-.
+![image](https://github.com/user-attachments/assets/c651a8c5-fcca-42ed-a1c9-3c61c678723c)
+
 # Wordpress Installation
 
 1. Install the wget package
@@ -764,13 +619,11 @@ sudo systemctl restart httpd
 ```
 accessing ```http://instance-public-ip/wordpress``` from your browser to see the wordpress installation
 .
-.
-.
-.
-IMAGE 
-.
-.
-.
+![image](https://github.com/user-attachments/assets/6b362504-50fa-409d-9f13-5e7902b73a14)
+![image](https://github.com/user-attachments/assets/27725011-f065-4e79-b8de-6b05a1a8241a)
+![image](https://github.com/user-attachments/assets/4b24ba65-b24f-48c5-9085-230e3e00237b)
+![image](https://github.com/user-attachments/assets/161b4439-3784-41b7-91e0-ae537f3f9bb3)
+
 # Final Steps and Reflections
  
 At this point, the infrastructure was set up with WordPress and MySQL on separate EC2 instances, using EBS volumes managed by LVM for flexible storage.
