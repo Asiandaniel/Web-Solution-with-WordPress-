@@ -1,7 +1,3 @@
-![image](https://github.com/user-attachments/assets/fa5c680c-d1c2-4897-bd45-c643894c2b4a)# Web-Solution-with-WordPress-
-
-
-
 
 # 1. Web Solution Implementation Using WordPress on AWS EC2
 
